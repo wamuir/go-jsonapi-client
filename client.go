@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -21,6 +22,7 @@ type Response struct {
 	StatusCode int
 	Header     http.Header
 	Document   core.Document
+	Raw        []byte
 	Trailer    http.Header
 }
 
@@ -54,18 +56,25 @@ func (c *Client) Get(path string, parms url.Values) (*Response, error) {
 	}
 	defer resp.Body.Close()
 
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
 	response.StatusCode = resp.StatusCode
 	response.Header = resp.Header
+	response.Raw = body
 	response.Trailer = resp.Trailer
 
-	if err := json.NewDecoder(resp.Body).Decode(&response.Document); err != nil {
+	decoder := json.NewDecoder(bytes.NewBuffer(body))
+	if err := decoder.Decode(&response.Document); err != nil {
 		return nil, err
 	}
 
 	return &response, nil
 }
 
-func (c *Client) Post(path string, parms url.Values, body core.Document) (*Response, error) {
+func (c *Client) Post(path string, parms url.Values, document core.Document) (*Response, error) {
 
 	var response Response
 
@@ -73,7 +82,7 @@ func (c *Client) Post(path string, parms url.Values, body core.Document) (*Respo
 	u.Path = path
 	u.RawQuery = parms.Encode()
 
-	j, err := json.MarshalIndent(body, "", "    ")
+	j, err := json.MarshalIndent(document, "", "    ")
 	if err != nil {
 		return nil, err
 	}
@@ -95,11 +104,18 @@ func (c *Client) Post(path string, parms url.Values, body core.Document) (*Respo
 	}
 	defer resp.Body.Close()
 
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
 	response.StatusCode = resp.StatusCode
 	response.Header = resp.Header
+	response.Raw = body
 	response.Trailer = resp.Trailer
 
-	if err := json.NewDecoder(resp.Body).Decode(&response.Document); err != nil {
+	decoder := json.NewDecoder(bytes.NewBuffer(body))
+	if err := decoder.Decode(&response.Document); err != nil {
 		return nil, err
 	}
 
