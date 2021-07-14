@@ -15,7 +15,8 @@ import (
 const mime = `application/vnd.api+json`
 
 type Client struct {
-	URL url.URL
+	URL    url.URL
+	Header http.Header
 }
 
 type Response struct {
@@ -27,9 +28,7 @@ type Response struct {
 }
 
 func New(u url.URL) Client {
-
-	return Client{URL: u}
-
+	return Client{u, make(http.Header)}
 }
 
 func (c *Client) Get(path string, parms url.Values) (*Response, error) {
@@ -48,6 +47,7 @@ func (c *Client) Get(path string, parms url.Values) (*Response, error) {
 		return nil, err
 	}
 
+	copyHeader(req.Header, c.Header)
 	req.Header.Set("Accept", "application/vnd.api+json")
 
 	resp, err := http.DefaultClient.Do(req)
@@ -95,6 +95,7 @@ func (c *Client) Post(path string, parms url.Values, document core.Document) (*R
 		return nil, err
 	}
 
+	copyHeader(req.Header, c.Header)
 	req.Header.Set("Content-Type", "application/vnd.api+json")
 	req.Header.Set("Accept", "application/vnd.api+json")
 
@@ -120,4 +121,13 @@ func (c *Client) Post(path string, parms url.Values, document core.Document) (*R
 	}
 
 	return &response, nil
+}
+
+// From net/http/httputil
+func copyHeader(dst, src http.Header) {
+	for k, vv := range src {
+		for _, v := range vv {
+			dst.Add(k, v)
+		}
+	}
 }
