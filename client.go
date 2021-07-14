@@ -82,7 +82,7 @@ func (c *Client) Post(path string, parms url.Values, document core.Document) (*R
 	u.Path = path
 	u.RawQuery = parms.Encode()
 
-	j, err := json.MarshalIndent(document, "", "    ")
+	j, err := json.Marshal(document)
 	if err != nil {
 		return nil, err
 	}
